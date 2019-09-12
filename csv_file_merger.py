@@ -4,16 +4,15 @@ Created on Thu Apr 25 10:38:02 2019
 
 @author: Jaymon
 
-Script used for merging the csv files in data folders (especially useful for
-the files in waterschap-aa-en-maas_sewage_2019\sewer_data\data_pump)
+Script used for merging the csv files in data folders. Supported:
+    - sewer_data
 
-Preparation: (1) unzip the data folders, (2) place this file in the folder
-            with the data folders in it. (3) make sure the csv files are directly
-            in the folders (for example, NOT RG8150/RG8150/data.csv)
+Preparation: (1) unzip the data folders, (2) place this file in the folder:
+    'waterschap-aa-en-maas_sewage_2019\sewer_data\' 
 
 Output: '..._overall.csv' data file placed in each data folder
 """
-folder_names = ['RG8150', 'RG8170', 'rg8170_99', 
+folder_names = ['RG8150/RG8150', 'RG8170/RG8170', 'rg8170_99', 
                 'rg8170_N99', 'RG8180_L0', 'RG8180_Q0']
 
 import pandas as pd
