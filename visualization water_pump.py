@@ -10,26 +10,42 @@ Required:
         waterschap-aa-en-maas_sewage_2019 
     - Make sure merge_files.py is already executed
 """
-###############################################################################
-############################### SETTINGS ######################################
-plot_type = 'Summarize per day of week' # Sequential / Summarize per week / 
-                        # Summarize per day of week
-data = ['RG8170', 'Niveaumeting']
-data[1]
 
-# Sequential
-resample_unit_1 = 'H' # H: Hour, M: Month. Type: int unit ; for example 3M
-
-# Summarize per day of week
-resample_unit_2 = 'H'
-
-###############################################################################
 import pandas as pd
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import calendar
 days = list(calendar.day_name)
+
+###############################################################################
+############################### SETTINGS ######################################
+###############################################################################
+
+################# General #####################
+
+plot_type = 'Summarize per day of week'
+# Options: 'Summarize per day of week', 'Sequential', 'Summarize per week'
+
+data = ['RG8170', 'Niveaumeting']
+# Options: (1: dataset) 'RG8170', 'RG8150' (2: measure) 'Niveaumeting',
+    # 'Debietmeting'
+    
+#### plot_type: Sequential ###################
+    
+resample_unit_1 = 'H' 
+# Options: 'H', 'M', 'D', '3M' for 3 months etc.
+
+#### plot_type: Summarize per day of week ####
+
+resample_unit_2 = 'H'
+
+#### plot_type: Summarize per week ###########
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 sns.set(rc={'figure.figsize':(18, 6)})
 
