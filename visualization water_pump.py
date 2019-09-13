@@ -24,7 +24,7 @@ days = list(calendar.day_name)
 
 ################# General #####################
 
-plot_type = 'Summarize per day of week'
+plot_type = 'Sequential'
 # Options: 'Summarize per day of week', 'Sequential', 'Summarize per week'
 
 data = ['RG8170', 'Niveaumeting']
@@ -33,12 +33,13 @@ data = ['RG8170', 'Niveaumeting']
     
 #### plot_type: Sequential ###################
     
-resample_unit_1 = 'H' 
+resample_unit_1 = 'D' 
 # Options: 'H', 'M', 'D', '3M' for 3 months etc.
 
 #### plot_type: Summarize per day of week ####
 
 resample_unit_2 = 'H'
+# Options: 'H', 'M', 'D', '3M' for 3 months etc.
 
 #### plot_type: Summarize per week ###########
 
@@ -47,7 +48,7 @@ resample_unit_2 = 'H'
 ###############################################################################
 ###############################################################################
 
-sns.set(rc={'figure.figsize':(18, 6)})
+sns.set(rc={'figure.figsize':(40, 18)})
 
 print('Reading data...')
 
@@ -89,6 +90,16 @@ elif plot_type == 'Summarize per day of week':
         plt.figure()
         df = rg8150[rg8150['weekday']==i]
         df = df.groupby(df.index.hour)['Value'].mean()
-        df.plot(title='24 hours of ' + data[1] + ' ' + data[0] + ' ' + days[i])
+        df.plot(lw=2)
+        plt.xlabel('hour', fontsize=24)
+        plt.ylabel(data[1], fontsize=22)
+        plt.rc('xtick',labelsize=14)
+        plt.rc('ytick',labelsize=14)
+        plt.title('24 hours of ' + data[1] + ' ' + data[0] + ' ' + days[i],
+                  size=26)
         plt.savefig('24 hours of ' + data[1] + ' ' + data[0] + ' ' + \
                     days[i] + '.png')
+        
+
+
+        
