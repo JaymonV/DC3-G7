@@ -50,7 +50,7 @@ for folder in folder_names:
                 df = pd.concat([df, df_temp])
 
     try:
-        df.to_csv(folder_path + '/' + folder + '_overall.csv', index=False, sep=';')
+        df.to_csv(folder_path + '/' + folder + '_overall.csv', index=False, sep=None)
     
     except:
         pass
