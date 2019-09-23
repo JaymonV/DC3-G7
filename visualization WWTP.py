@@ -31,8 +31,6 @@ data = ['RG1876_flow']
 ###############################################################################
 ###############################################################################
 
-sns.set(rc={'figure.figsize':(40, 18)})
-
 print('Reading data...')
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,20 +45,39 @@ df['datumBeginMeting'] = pd.to_datetime(df['datumBeginMeting'],
 
 df['hstWaarde'] = pd.to_numeric(df['hstWaarde'])
 
-df.index = df['datumBeginMeting']
-
 print('Finished. \n')
 
 df_1 = df[df['datumBeginMeting'] < pd.to_datetime('2018-06-01')]
 
-df_1_max = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').max()
-df_1_min = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').min()
+df_1['rounded_date'] = df_1['datumBeginMeting'].dt.round('10D')
 
-df_1 = pd.concat([df_1_max, df_1_min], axis=1)
+f, ax = plt.subplots()
 
-df_1.columns = ['datetime', 'max', '.', 'min']
+sns.set(rc={'figure.figsize':(20, 9),
+            "lines.linewidth": 0.15})
 
-df_1.plot(x='datetime', y=['max', 'min'])
+sns.lineplot(x=df_1['rounded_date'], y=df_1['hstWaarde'],
+             ci=99.9)
+
+ax.xaxis.set_major_locator(plt.MaxNLocator(8))
+ax.set_title('WWTP flow value: 99% confidence interval by 10 days',
+             {'fontsize': 22})
+ax.set_xlabel('Date', {'fontsize': 16})
+ax.set_ylabel('Flow value', {'fontsize': 16})
+ax.tick_params(axis='both', which='major', labelsize=14)
+
+
+# =============================================================================
+# 
+# df_1_max = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').max()
+# df_1_min = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').min()
+# 
+# df_1 = pd.concat([df_1_max, df_1_min], axis=1)
+# 
+# df_1.columns = ['datetime', 'max', '.', 'min']
+# 
+# df_1.plot(x='datetime', y=['max', 'min'])
+# =============================================================================
 
 # =============================================================================
 # 
