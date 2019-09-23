@@ -30,13 +30,13 @@ import os
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
+script_test = 0
+
 for folder in folder_names:
     
     df = pd.DataFrame()
     
     folder_path = current_dir + '/' + folder
-    
-    script_test = 0
     
     if os.path.exists(folder_path):
         
