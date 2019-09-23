@@ -46,14 +46,16 @@ for folder in folder_names:
             if 'overall' not in file:
                 print('merging file: ' + file)
                 df_temp = pd.read_csv(folder_path + '/' + file, 
-                                      error_bad_lines=False, sep=';')
+                                      error_bad_lines=False, sep=None)
                 df = pd.concat([df, df_temp])
 
     try:
-        df.to_csv(folder_path + '/' + folder + '_overall.csv', index=False, sep=None)
+        df.to_csv(folder_path + '/' + folder + '_overall.csv', 
+                  index=False, 
+                  sep=';')
     
     except:
-        pass
+        print('none')
 
 if script_test != 1:
     print('No folder with data found to extract. Check script file location.')

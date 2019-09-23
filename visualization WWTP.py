@@ -37,7 +37,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 data_path = current_dir + '\\' + \
             'waterschap-aa-en-maas_sewage_2019_db_pumps\sewer_data_db\data_wwtp_flow' + '\\' + \
-            data[0] + '/' + data[0] + '_overall.csv'
+            data[0] + '\\' + data[0] + '_overall.csv'
 
 df = pd.read_csv(data_path, sep=';', decimal=',')
 df['datumBeginMeting'] = pd.to_datetime(df['datumBeginMeting'], 
