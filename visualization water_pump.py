@@ -100,6 +100,4 @@ elif plot_type == 'Summarize per day of week':
         plt.savefig('24 hours of ' + data[1] + ' ' + data[0] + ' ' + \
                     days[i] + '.png')
         
-
-
         
