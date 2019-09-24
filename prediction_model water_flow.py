@@ -2,7 +2,21 @@
 
 Requires 'full_data.csv' in the same folder as the current Python file. 
 
+"""
+
+########################### SETTINGS ##########################################
+import warnings
+import time
+
+import matplotlib.pyplot as plt
+warnings.filterwarnings("ignore")
+plt.style.use('fivethirtyeight')
+
 import os
+import pandas as pd
+from statsmodels.tsa.arima_model import ARIMA
+import matplotlib
+matplotlib.rcParams['axes.labelsize'] = 14
 matplotlib.rcParams['xtick.labelsize'] = 12
 matplotlib.rcParams['ytick.labelsize'] = 12
 matplotlib.rcParams['text.color'] = 'k'
@@ -48,11 +62,11 @@ df = df.set_index('measurement_begin')
 
 ###############################################################################
 
-y = df['value'].resample('H').mean()
+y = df['value'].resample('3H').mean()
 
 y = y.fillna(method='ffill')
 
-model = ARIMA(y, order=(24, 1, 0))
+model = ARIMA(y, order=(6, 1, 0))
 
 model_fit = model.fit(disp=0)
 
