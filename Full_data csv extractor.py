@@ -64,12 +64,15 @@ df = df.set_index('measurement_begin')
 
 time_start = time.time()
 
-y = df['value'].resample('3H').mean()
+y = df['value'].resample('H').mean()
 
 y = y.fillna(method='ffill')
 
+y = y.reset_index()
+
 y.to_csv('Export {} {}.csv'
-         .format(pump_station_choice, measurement_type_choice))
+         .format(pump_station_choice, measurement_type_choice),
+         index=False)
 
 # =============================================================================
 # print('Fitting model...')
