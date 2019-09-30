@@ -1,0 +1,87 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(readxl)
+```
+
+Files need to have their two top rows removed by hand and have to be in the sewer_data folder. Assumes access to the sewer_data and sewer_model files
+```{r}
+pumps <- c('bokhoven', 'de_rompert', 'maaspoort', 'haarsteeg', 'helftheuvelweg',
+           'engelerschans', 'oude_engelseweg', 'maaspoort_de_rompert')
+df <- 0
+folder <- 'sewer_data/rain_timeseries/'
+files <- list.files(folder)
+
+for (file in files){
+  file <- paste(folder, file, sep='')
+  if (df == 0){
+    df <- fread(file)
+  } else {
+    temp <- fread(file)
+    df <- bind_rows(df, temp)
+    rm(temp)
+  }
+}
+# df <- fread('sewer_data/rain_timeseries/Download__5_201805312200_201806302200.csv')
+df <- subset(df, select=which(!duplicated(names(df)))) 
+```
+Removed duplicate columns (4)
+
+```{r}
+names <- colnames(df)
+
+formated_df <- df %>%
+  rename(measurement_begin = Begin, measurement_end = Eind) %>%
+  mutate(measurement_begin = as.POSIXct(measurement_begin, format='%d-%m-%Y %H:%M:%S'),
+         measurement_end = as.POSIXct(measurement_end, format='%d-%m-%Y %H:%M:%S')) %>%
+  mutate(interval = measurement_end - measurement_begin) %>%
+  pivot_longer(Lekerstraat:Bosscheweg, names_to = 'location', values_to = 'rainfall') %>%
+  select(measurement_begin, measurement_end, interval, location, rainfall)
+
+```
+
+```{r}
+locations <- read_excel('sewer_model/20180717_dump riodat rioleringsdeelgebieden_matched_to_rainfall_locations_preped.xlsx')
+
+area <- read.csv2('sewer_model/surfacearea_sewersystems.txt') %>%
+  rename(code = RGDIDENT, area = Area) %>%
+  select(code, area)
+
+relevant_locations <- c('Bokhoven', 'Engelen', 'Hertogenbosch (Oude Engelenseweg)',
+                        'Hertogenbosch (Helftheuvelweg)', 'Hertogenbosch (Rompert)',
+                        'Hertogenbosch (Maaspoort)', 'Drunen', 'Drunen (Stationsstraat)',
+                        'Elshout', 'Haarsteeg', 'Hedikhuizen', 'heesbeen',
+                        'Herpt', 'Heusden Vesting', 'Luttelherpt', 'Oudheusden',
+                        'Vlijmen (Het Hoog)', 'Vlijmen')
+pump_stations =c('bokhoven', 'engelerschans', 'oude_engelseweg',
+                                       'helftheuvelweg', 'de_rompert',
+                                       'maaspoort', 'haarsteeg', 'haarsteeg',
+                                       'haarsteeg', 'haarsteeg', 'haarsteeg', 'haarsteeg',
+                                       'haarsteeg', 'haarsteeg', 'haarsteeg', 'haarsteeg',
+                                       'haarsteeg', 'haarsteeg')
+
+location_to_pumps <- data.frame(location=relevant_locations,
+                        pump_station=pump_stations)
+
+code_pair <- locations %>%
+  select(Code, Rainfall, `Naam kern`) %>%
+  filter(!is.na(Rainfall)) %>%
+  rename(code=Code, location=`Naam kern`) %>%
+  select(-Rainfall) %>%
+  left_join(area)
+
+coded_df <- formated_df %>%
+  left_join(code_pair) %>%
+  filter(location %in% relevant_locations) %>%
+  left_join(location_to_pumps)
+
+fwrite(coded_df, file='combined_data_files/rainfall_ts_combined.csv')
+
+```
+
+
