@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+Loading Data
+```{r}
+data <- read.csv("combined_data_files/full_data_new.csv")
+```
+
+Visus
+Flow visu 1
+```{r}
+data %>%
+  mutate(weekend = weekday >= 6, 
+         daytimestamp = hour*60 + min) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  filter(!is.na(weekend), measurement_type=='flow') %>%
+  group_by(pump_station, weekend, hour, min) %>%
+  summarise(n=mean(value)) %>%
+  ggplot(aes(x=hour, y=n)) +
+  stat_smooth(method="loess", se=TRUE, alpha=0.3) + 
+  facet_grid(cols=vars(weekend), rows=vars(pump_station))
+
+```
+Flow visu 2
+```{r}
+data %>%
+  mutate(weekend = weekday >= 6, 
+         daytimestamp = hour*60 + min,
+         warm = month >= 5 & month >=10) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  mutate(warm = replace(warm, warm==TRUE, 'Warm months'),
+         warm = replace(warm, warm==FALSE, 'Cold months')) %>%
+  filter(!is.na(weekend), measurement_type=='flow') %>%
+  group_by(pump_station, warm, hour, min) %>%
+  summarise(n=mean(value)) %>%
+  ggplot(aes(x=hour, y=n, color=pump_station, linetype=warm), alpha=0.8) +
+  stat_smooth(method="loess", se=TRUE, alpha=0.5) + 
+  facet_grid(rows=vars(weekend)) +
+  labs(title='Average smoothed flow during a day', y='Minute average smoothed flow',
+       x='Hour of the day', color='Pump station', linetype='Warm months (Mar-Oct)')
+```
+
+Level visu 1
+```{r}
+prep <- data %>%
+  mutate(weekend = weekday >= 6, 
+         daytimestamp = hour*60 + min,
+         warm = month >= 5 & month >=10) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  mutate(warm = replace(warm, warm==TRUE, 'Warm months'),
+         warm = replace(warm, warm==FALSE, 'Cold months')) %>%
+  filter(!is.na(weekend), measurement_type=='level') %>%
+  group_by(pump_station, warm, hour, min) %>%
+  summarise(n=mean(value))
+
+ggplot(prep, aes(x=hour, y=n, color=pump_station, linetype=warm), alpha=0.5) +
+  stat_smooth(method="loess", se=TRUE, alpha=0.3)
+  labs(title='Average smoothed level during a day', y='Minute average smoothed level',
+       x='Hour of the day', color='Pump station', linetype='Warm months (Mar-Oct)')
+```
+
+```{r}
+data %>%
+  filter(pump_station=='haarsteeg') %>%
+  group_by(hour, measurement_type)
+
+```
+
+```{r}
+```
+
