@@ -17,9 +17,13 @@ df_ts <- ts(df[,'value'],
 
 df_ts2 <- df_ts - lag(df_ts, k=168)
 
-df_pacf <- pacf(df_ts2, lag=48)
+df_pacf <- pacf(df_ts2, lag=200)
 
 model <- arima(df_ts2, order=c(3,0,0), method="CSS",
-               seasonal=list(order=c(0,1,1),period=168))
+               seasonal=list(order=c(0,1,1),
+                             period=168))
 
 coeftest(model)
+summary(model)
+
+var(df[,'value'])**0.5

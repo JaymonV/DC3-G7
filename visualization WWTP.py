@@ -51,7 +51,7 @@ df_1 = df[df['datumBeginMeting'] < pd.to_datetime('2018-06-01')]
 
 df_1['rounded_date'] = df_1['datumBeginMeting'].dt.round('10D')
 
-f, ax = plt.subplots()
+f, ax = plt.subplots(figsize=(20, 10))
 
 sns.set(rc={'figure.figsize':(20, 9),
             "lines.linewidth": 0.15})
@@ -65,43 +65,3 @@ ax.set_title('WWTP flow value: 99% confidence interval by 10 days',
 ax.set_xlabel('Date', {'fontsize': 16})
 ax.set_ylabel('Flow value', {'fontsize': 16})
 ax.tick_params(axis='both', which='major', labelsize=14)
-
-
-# =============================================================================
-# 
-# df_1_max = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').max()
-# df_1_min = df_1[['datumBeginMeting', 'hstWaarde']].resample('4H').min()
-# 
-# df_1 = pd.concat([df_1_max, df_1_min], axis=1)
-# 
-# df_1.columns = ['datetime', 'max', '.', 'min']
-# 
-# df_1.plot(x='datetime', y=['max', 'min'])
-# =============================================================================
-
-# =============================================================================
-# 
-# ax = df_1_max.plot(x='datumBeginMeting', y='hstWaarde')
-# ax = df_1_min.plot(x='datumBeginMeting', y='hstWaarde')
-# =============================================================================
-
-
-# =============================================================================
-# elif plot_type == 'Summarize per day of week':
-#     rg8150['weekday'] = rg8150["TimeStamp"].dt.dayofweek
-#     
-#     for i in range(7):
-#         plt.figure()
-#         df = rg8150[rg8150['weekday']==i]
-#         df = df.groupby(df.index.hour)['Value'].mean()
-#         df.plot(lw=2)
-#         plt.xlabel('hour', fontsize=24)
-#         plt.ylabel(data[1], fontsize=22)
-#         plt.rc('xtick',labelsize=14)
-#         plt.rc('ytick',labelsize=14)
-#         plt.title('24 hours of ' + data[1] + ' ' + data[0] + ' ' + days[i],
-#                   size=26)
-#         plt.savefig('24 hours of ' + data[1] + ' ' + data[0] + ' ' + \
-#                     days[i] + '.png')
-# =============================================================================
-        
