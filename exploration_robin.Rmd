@@ -1,0 +1,44 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+```{r}
+rm(data)
+```
+
+
+```{r}
+debiet_AaMaas <- read.csv2('sewer_data/data_pump/DBDebietmeting2018_2019small.csv')
+niveau_AaMaas <- read.csv2('sewer_data/data_pump/DBNiveaumetingen2018_2019Small.csv')
+names <- c('Timestamp', 'Timezone', 'RG8170', 'RG8180')
+pump_names <- c('RG8170', 'RG8180')
+colnames(niveau_AaMaas) <- names
+colnames(debiet_AaMaas) <- names
+debiet_AaMaas['type'] <- 'debiet'
+niveau_AaMaas['type'] <- 'niveau'
+
+AaMaas <- bind_rows(debiet_AaMaas, niveau_AaMaas)
+AaMaas$Timestamp <- as.POSIXct(AaMaas$Timestamp, format='%m-%d-%y %H:%M:%S') #01-01-18 16:16:09
+AaMaas <- AaMaas %>%
+  gather('RG8170', 'RG8180', key='pump', value='value') %>%
+  mutate(weekday=as.POSIXlt(Timestamp)$wday, day=as.POSIXlt(Timestamp)$mday,
+         sec=as.POSIXlt(Timestamp)$sec, min=as.POSIXlt(Timestamp)$min, hour=as.POSIXlt(Timestamp)$hour,
+         month=as.POSIXlt(Timestamp)$mon)
+```
+
+```{r}
+ggplot(filter(AaMaas, type=='debiet'), aes(x=Timestamp, y=as.numeric(value), color=pump)) +
+  geom_line()
+```
+
+
+```{r}
+AaMaas %>%
+  group_by(pump, type, weekday, hour) %>%
+  summarise(n=mean(value)) %>%
+```
+
