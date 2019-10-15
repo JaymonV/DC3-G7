@@ -1,0 +1,161 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(hms)
+```
+
+Loading Data
+```{r}
+data <- fread("combined_data_files/full_data_new.csv")
+```
+
+Visus
+Flow visu 1
+```{r}
+flow1_visu <- data %>%
+  mutate(weekend = weekday >= 6, time = hour*60+min) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  filter(!is.na(weekend), measurement_type=='flow') %>%
+  group_by(pump_station, weekend, hour, time) %>%
+  summarise(n=mean(value))
+
+ggplot(flow1_visu, aes(x=time, y=n, color=pump_station)) +
+  geom_line() +
+  stat_smooth(method="loess", se=TRUE, color='black') + 
+  facet_grid(rows=vars(pump_station), cols=vars(weekend), scales='free_y') +
+  labs(title='Water flow during a day', y='Flow in m^3/h', x=element_blank(), color='Pump station',
+       caption = 'Flow figure 1: Minute averaged flow with a smoothed trend line') +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+
+```
+Flow visu 2
+```{r}
+data %>%
+  mutate(weekend = weekday >= 6, 
+         time = hour*60 + min,
+         warm = month >= 5 & month >=10) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  mutate(warm = replace(warm, warm==TRUE, 'Warm months'),
+         warm = replace(warm, warm==FALSE, 'Cold months')) %>%
+  filter(!is.na(weekend), measurement_type=='flow') %>%
+  group_by(pump_station, weekend, warm, hour, min) %>%
+  summarise(n=mean(value)) %>%
+  ggplot(aes(x=hour, y=n, color=pump_station, linetype=warm), alpha=0.8) +
+  stat_smooth(method="loess", se=TRUE, alpha=0.5) + 
+  facet_grid(cols=vars(weekend), rows=vars(pump_station), scales='free_y') +
+  labs(title='Water flow during a day with seasons', y='Flow in m^3/h',
+       x=element_blank(), color='Pump station', linetype='Warm months (Mar-Oct)',
+       caption='Flow figure 2: Smoothed trend line with seasons added') +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+```
+
+```{r}
+data %>%
+  filter(measurement_type=='flow') %>%
+  group_by(value, pump_station, month, day, hour) %>%
+  summarise(n = mean(value)) %>%
+  ggplot(aes(x=factor(hour), y=n, color=pump_station)) +
+  geom_boxplot() +
+  facet_grid(rows=vars(pump_station), scales='free_y')
+```
+
+
+Level visu 1
+```{r}
+level1_data <- data %>%
+  mutate(weekend = weekday >= 6, 
+         time = hour*60 + min,
+         warm = month >= 5 & month >=10) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  mutate(warm = replace(warm, warm==TRUE, 'Warm months'),
+         warm = replace(warm, warm==FALSE, 'Cold months')) %>%
+  filter(!is.na(weekend), measurement_type=='level') %>%
+  group_by(pump_station, warm, hour, time) %>%
+  summarise(n=median(value))
+
+ggplot(level1_data, aes(x=time, y=n, color=pump_station), alpha=0.5) +
+  geom_line() +
+  stat_smooth(method="loess", se=TRUE, alpha=0.5, color='black') +
+  facet_grid(rows=vars(pump_station), cols=vars(warm), scales='free_y') +
+  labs(title='Water level during a day', y='Water level +- NAP',
+       x=element_blank(), color='Pump station', linetype='Warm months (Mar-Oct)',
+       caption='Level figure 1: Median minute level measurements during a day with trend line') +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+  
+```
+
+Level 2 visu
+```{r}
+level2_data <- data %>%
+  mutate(weekend = weekday >= 6, 
+         time = hour*60 + min,
+         warm = month >= 5 & month >=10) %>%
+  mutate(weekend = replace(weekend, weekend==TRUE,'Weekend'),
+         weekend = replace(weekend, weekend==FALSE,'Workday')) %>%
+  mutate(warm = replace(warm, warm==TRUE, 'Warm months'),
+         warm = replace(warm, warm==FALSE, 'Cold months')) %>%
+  filter(!is.na(weekend), measurement_type=='level') %>%
+  group_by(pump_station, warm, hour, time) %>%
+  summarise(n=mean(value))
+
+ggplot(level2_data, aes(x=time, y=n, color=pump_station), alpha=0.8) +
+  geom_line() +
+  stat_smooth(method="loess", se=TRUE, alpha=0.3, color='black') +
+  facet_grid(rows=vars(pump_station), cols=vars(warm), scales='free_y') +
+  labs(title='Minute average water level during a day', y='Water level +- NAP',
+       x=element_blank(), color='Pump station', linetype='Warm months (Mar-Oct)') +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+```
+
+
+
+```{r}
+rain <- fread('combined_data_files/rainfall_ts_combined.csv')
+
+rain %>%
+  filter(interval == 5) %>%
+  mutate(rainwater = (rainfall/1000)*area) %>%
+  group_by(pump_station, measurement_begin) %>%
+  summarise(area = sum(area), rainfall=mean(rainfall), rainwater=sum(rainwater)) %>%
+  ggplot(aes(pump_station, rainfall)) +
+    geom_boxplot()
+```
+
+```{r}
+rainfall_per_day <- rain %>%
+  filter(interval == 5) %>%
+  mutate(rainwater = (rainfall/1000)*area,
+         date_time = as.POSIXct(measurement_begin, format='%FT%XZ')) %>%
+  mutate(date = format(date_time, format='%Y-%m-%d')) %>%
+  group_by(date) %>%
+  summarise(n = sum(rainwater))
+
+ggplot(rainfall_per_day, aes(n)) +
+  geom_histogram() +
+  labs(title='Rainfall during a month per day', x='Rainfall in a day in m^3', y='Amount of days',
+       caption='Rainfall figure 1: Rainfall in the entire system per day for the range of the data')
+```
+
+```{r}
+min_max <- data %>%
+  filter(measurement_type == 'flow') %>%
+  filter(value >= 1) %>%
+  group_by(pump_station) %>%
+  summarise(min_pumping = min(value),
+            max_pumping = max(value))
+min_max
+```
+

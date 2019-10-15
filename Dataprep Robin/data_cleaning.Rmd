@@ -1,0 +1,194 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(lubridate)
+```
+
+```{r}
+rm(bokhoven_flow, bokhoven_level, haarsteeg_flow, haarsteeg_level, df, df_folder)
+```
+
+
+Data preparation 1
+Assumes access to the combined files of all flow and level data in the combined_data_files folder.
+```{r}
+folder_import_csv <- function(folder) {
+  file_list <- list.files(folder)
+  rm(df_folder)
+  for (file in file_list){
+    file <- paste(folder, file, sep='')
+    # if the merged dataset doesn't exist, create it
+    if (grep('csv', file)==0) {
+      next
+    }
+    if (!exists("df_folder")){
+      df_folder <- read.csv(file)
+    }
+     
+    # if the merged dataset does exist, append to it
+    if (exists("df_folder")){
+      temp_dataset <- read.csv(file)          
+      df_folder<-bind_rows(df_folder, temp_dataset)
+      rm(temp_dataset)
+    }
+  }
+  df_folder
+}
+
+folder_import_csv2 <- function(folder, type) {
+  file_list <- list.files(folder)
+  for (file in file_list){
+    file <- paste(folder, file, sep='')
+    # if the merged dataset doesn't exist, create it
+    if (!exists("df_folder")){
+      df_folder <- read.csv2(file)
+    }
+    # if the merged dataset does exist, append to it
+    if (exists("df_folder")){
+      df_folder<-bind_rows(df_folder, read.csv2(file))
+    }
+  }
+  df_folder
+}
+
+aamaas_csv_prep <- function(csv, station, type) {
+  csv <- csv %>%
+    select(-datumMonster, -historianEenheid) %>%
+    rename(measurement_begin=datumBeginMeting, measurement_end=datumEindeMeting, value=hstWaarde) %>%
+    mutate(measurement_begin=ymd_hms(measurement_begin),
+           measurement_end=ymd_hms(measurement_end),
+           pump_station=station,
+           measurement_type=type) %>%
+    mutate(interval=(measurement_end-measurement_begin),
+           weekday=wday(measurement_begin), 
+           day=mday(measurement_begin),
+           sec=second(measurement_begin), 
+           min=minute(measurement_begin), 
+           hour=hour(measurement_begin), 
+           month=month(measurement_begin),
+           year=year(measurement_begin))
+  
+  if (type=='level') {
+    csv$value <- csv$value*1000
+  }
+  csv
+}
+
+municipality_aamaas_prep <- function(df, station, type) {
+  df %>%
+    select(-historianEenheid) %>%
+    rename(measurement_begin=datumBeginMeting, measurement_end=datumEindeMeting, value=hstWaarde) %>%
+    mutate(measurement_begin=ymd_hms(measurement_begin),
+           measurement_end=ymd_hms(measurement_end),
+           pump_station=station,
+           measurement_type=type) %>%
+    mutate(interval=(measurement_end-measurement_begin),
+           weekday=wday(measurement_begin), 
+           day=mday(measurement_begin),
+           sec=second(measurement_begin), 
+           min=minute(measurement_begin), 
+           hour=hour(measurement_begin), 
+           month=month(measurement_begin),
+           year=year(measurement_begin)) %>%
+    select(-datumMonster, -historianKwaliteit, -historianTagnummer)
+}
+
+municipality_prep <- function(df, type) {
+  df %>%
+    select(-`001: Poeldonk Neerslagmeting (mm)`) %>%
+    mutate(measurement_begin=dmy_hms(paste(Datum,Tijd)),
+           measurement_type=type) %>%
+    arrange(measurement_begin) %>%
+    mutate(interval = measurement_begin - lag(measurement_begin, default = measurement_begin[1])) %>%
+    rename(oude_engelenseweg=`002: Oude Engelenseweg Niveau actueel (1&2)(cm)`,
+           helftheuvelweg=`003: Helftheuvelweg Niveau (cm)`,
+           engelerschans=`004: Engelerschans Niveau trend niveau DWA(cm)`,
+           de_rompert=`005: De Rompert Niveau (cm)`,
+           maaspoort=`006: Maaspoort Niveau actueel (1&2)(cm)`)  %>%
+    gather(key='pump_station', value='value', oude_engelenseweg, helftheuvelweg, de_rompert, maaspoort, engelerschans) %>%
+    mutate(value=as.numeric(str_replace(value, ',', '.'))*10) %>%
+    select(-Datum, -Tijd) %>%
+    mutate(weekday=wday(measurement_begin), 
+           day=mday(measurement_begin),
+           sec=second(measurement_begin), 
+           min=minute(measurement_begin), 
+           hour=hour(measurement_begin), 
+           month=month(measurement_begin),
+           year=year(measurement_begin))
+}
+
+```
+
+
+```{r}
+bokhoven_flow <- aamaas_csv_prep(fread('combined_data_files/rg8180_Q0_overall.csv'), 'bokhoven', 'flow')
+bokhoven_level <- aamaas_csv_prep(fread('combined_data_files/rg8180_L0_overall.csv'),  'bokhoven', 'level')
+
+haarsteeg_flow <- aamaas_csv_prep(fread('combined_data_files/rg8170_99_overall.csv'), 'haarsteeg', 'flow')
+haarsteeg_level <- aamaas_csv_prep(fread('combined_data_files/rg8170_N99_overall.csv'),  'haarsteeg', 'level')
+
+engelerschans <- municipality_aamaas_prep(fread('combined_data_files/1210FIT201_99_overall.csv'),
+                                          'engelerschans', 'flow')
+
+b_flow <- bokhoven_flow %>%
+  select(measurement_begin, value) %>%
+  rename(bokhoven = value)
+
+h_flow <- haarsteeg_flow %>%
+  select(measurement_begin, value) %>%
+  rename(haarsteeg = value)
+
+engelerschans <- engelerschans %>%
+  left_join(b_flow, by='measurement_begin') %>%
+  left_join(h_flow, by="measurement_begin")
+
+engelerschans <- engelerschans %>%
+  mutate(value = value - bokhoven - haarsteeg) %>%
+  mutate(value = replace(value, value<0, 0)) %>%
+  select(-bokhoven, -haarsteeg)
+
+AaMaasPumps <- bind_rows(bokhoven_flow, bokhoven_level, haarsteeg_flow, haarsteeg_level)
+rm(bokhoven_flow, bokhoven_level, haarsteeg_flow, haarsteeg_level)
+# write.csv(AaMaasPumps, file='combined_data_files/AaMaasPumps.csv')
+```
+
+```{r}
+municipality_level <- municipality_prep(fread('combined_data_files/data_pump_level_overall.csv'), 'level')
+
+helftheuvelweg <- municipality_aamaas_prep(fread('combined_data_files/1210FIT301_99_overall.csv'),
+                                           'helftheuvelweg', 'flow')
+oude_engelenseweg <- municipality_aamaas_prep(fread('combined_data_files/1210FIT401_94_overall.csv'), 
+                                           'oude_engelenseweg', 'flow')
+
+maaspoort_de_rompert <- municipality_aamaas_prep(fread('combined_data_files/1210FIT501_99_overall.csv'),
+                                            'maaspoort_de_rompert', 'flow')
+
+df <- bind_rows(municipality_level, helftheuvelweg, oude_engelenseweg, maaspoort_de_rompert, engelerschans)
+
+rm(municipality_level, helftheuvelweg, oude_engelenseweg, maaspoort_de_rompert, engelerschans)
+```
+
+```{r}
+df <- df %>%
+  select(-measurement_end)
+
+full_data <- bind_rows(df, AaMaasPumps) %>%
+  select(-measurement_end, -historianKwaliteit, -historianTagnummer)
+
+rm(AaMaasPumps, df)
+
+sum(is.na(full_data$measurement_begin) |
+    year(full_data$measurement_begin) == '')
+
+full_data <- full_data %>%
+  mutate(measurement_type = as.factor(measurement_type),
+         pump_station = as.factor(pump_station))
+
+fwrite(full_data, 'combined_data_files/full_data_new.csv', showProgress=FALSE, nThread=4, verbose=FALSE)
+```

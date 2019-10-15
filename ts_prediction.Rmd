@@ -1,0 +1,111 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(data.table)
+library(fpp2)
+```
+
+```{r}
+agg_data <- fread('combined_data_files/flow_level_and_rain.csv')
+
+max <- agg_data %>%
+  filter(measurement_type == 'flow') %>%
+  group_by(pump_station) %>%
+  summarise(max_flow = max(mean_value))
+```
+
+Oude engelenseweg
+```{r}
+print(unique(agg_data$pump_station))
+
+oude_engelseweg <- agg_data %>%
+  filter(measurement_type=='flow') %>%
+  filter(pump_station=='oude_engelenseweg') %>%
+  select(year, month, day, hour, mean_value, mean_value_sd, mean_rainfall, rainfall_volume, datetime) %>%
+  mutate(weekday = wday(ymd_hms(datetime))) %>%
+  filter(ymd_hms(datetime) >= ymd_hms('2018-04-18 00:00:00'))
+
+oude_engelseweg[oude_engelseweg$mean_value == 0,]
+
+rain_days <- oude_engelseweg %>%
+  mutate(rain_volume_lag = c(0, rainfall_volume[0:(length(rainfall_volume)-1)])) %>%
+  filter(mean_rainfall > 0 | rain_volume_lag > 0) %>%
+  group_by(weekday, hour) %>%
+  summarise(mean_flow_r = mean(mean_value),
+            mean_lag_rain = mean(rain_volume_lag),
+            mean_rain = mean(rainfall_volume))
+
+dry_days <- oude_engelseweg %>%
+  filter(mean_rainfall == 0) %>%
+  group_by(weekday, hour) %>%
+  summarise(mean_flow = mean(mean_value)) %>%
+  left_join(rain_days)
+
+oude_ts <- ts(oude_engelseweg[, c('mean_value', 'rainfall_volume')], start(0, 4), frequency = 168)
+flow_ts <- oude_ts[,'mean_value']
+autoplot(oude_ts[,'mean_value'])
+ggAcf(oude_ts)
+
+meanf(flow_ts, 6)
+naive(flow_ts, 6)
+snaive(flow_ts, 6)
+
+autoplot(flow_ts) +
+  autolayer(meanf(flow_ts, h=6),
+    series="Mean", PI=FALSE) +
+  autolayer(naive(flow_ts, h=6),
+    series="Naïve", PI=FALSE) +
+  autolayer(snaive(flow_ts, h=6),
+    series="Seasonal naïve", PI=FALSE)
+
+res <- residuals(naive(window(flow_ts, end=60), h=168))
+autoplot(res)
+checkresiduals(res)
+accuracy(naive(window(flow_ts, end=c(59, 168)), h=6), window(flow_ts, start=60, end=c(60,168)))
+
+flow_ts %>% diff(lag=168) %>% ggtsdisplay()
+flow_ts %>% diff(lag=168) %>% diff() %>% ggtsdisplay()
+
+flow_ts %>% mstl() %>%
+  autoplot() + xlab("Week")
+
+oude_ts %>%
+  as.data.frame() %>%
+  ggplot(aes(x=mean_value, y=rainfall_volume)) + geom_jitter()
+
+fit <- auto.arima(flow_ts,
+         xreg = cbind(fourier(flow_ts, c(10,10)),
+               heating=oude_ts[,"rainfall_volume"])) %>%
+  autoplot()
+```
+
+```{r}
+oude_ts_lags <- cbind(
+    RainLag0 = oude_ts[,"rainfall_volume"],
+    RainLag1 = stats::lag(oude_ts[,"rainfall_volume"],1),
+    RainLag2 = stats::lag(oude_ts[,"rainfall_volume"],2),
+    RainLag3 = stats::lag(oude_ts[,"rainfall_volume"],3)) %>%
+  head(NROW(oude_ts))
+
+fit1 <- auto.arima(oude_ts[24:1344,1], xreg=oude_ts_lags[24:1344,1])
+fit2 <- auto.arima(oude_ts[24:1344,1], xreg=oude_ts_lags[24:1344,1:2])
+fit3 <- auto.arima(oude_ts[24:1344,1], xreg=oude_ts_lags[24:1344,1:3])
+fit4 <- auto.arima(oude_ts[24:1344,1], xreg=oude_ts_lags[24:1344,1:4])
+
+c(fit1[["aicc"]],fit2[["aicc"]],fit3[["aicc"]],fit4[["aicc"]])
+
+(fit <- auto.arima(oude_ts[,1], xreg=oude_ts_lags[,1:3]))
+
+fit_try <- auto.arima(flow_ts)
+
+(fit_try)
+```
+
+
+

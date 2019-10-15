@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(lubridate)
+```
+
+```{r}
+df <- fread('combined_data_files/full_data_new.csv') %>%
+  mutate(measurement_begin = ymd_hms(measurement_begin))
+sum(is.na(df$measurement_begin))
+
+flow <- df %>%
+  filter(measurement_type=='flow')
+
+level <- df %>%
+  filter(measurement_type=='level')
+
+rain <- fread('combined_data_files/rainfall_ts_combined.csv')  %>%
+  mutate(measurement_begin=ymd_hms(measurement_begin)) %>%
+  mutate(year=year(measurement_begin))
+```
+
+```{r}
+flow[is.na(flow$year),]
+sum(is.na(flow$measurement_begin))
+
+sum(is.na(level$year))
+sum(is.na(level$measurement_begin))
+
+sum(is.na(rain$year))
+sum(is.na(rain$measurement_begin))
+
+
+agg_flow <- flow %>%
+  select(measurement_type, pump_station, year, month, day, hour, value) %>%
+  group_by(measurement_type, pump_station, year, month, day, hour) %>%
+  summarise(mean_value = as.integer(mean(value)),
+            sd = as.integer(sd(value)))
+
+sum(is.na(agg_flow$mean_value))
+
+agg_level <- level %>%
+  select(measurement_type, pump_station, year, month, day, hour, value) %>%
+  group_by(measurement_type, pump_station, year, month, day, hour) %>%
+  summarise(mean_value = as.integer(mean(value)),
+            sd = as.integer(sd(value)))
+
+area_rain <- rain %>%
+  select(pump_station, location_core, code, area) %>%
+  group_by(pump_station, location_core, code) %>%
+  summarise(mean_area = max(area)) %>%
+  summarise(location_core_area = sum(mean_area)) %>%
+  summarise(pump_area = sum(location_core_area))
+
+agg_rain <- rain %>%
+  select(pump_station, year, month, day, hour, rainfall, area) %>%
+  group_by(pump_station, year, month, day, hour) %>%
+  summarise(mean_rainfall = round(weighted.mean(rainfall, area))) %>%
+  left_join(area_rain) %>%
+  mutate(rainfall_volume = mean_rainfall * pump_area / 1000)
+sum(is.na(agg_rain$mean_rainfall))
+sum(is.na(rain$rainfall))
+
+maaspoort_de_rompert <- agg_rain %>%
+  filter(pump_station == 'maaspoort' | pump_station == 'de_rompert') %>%
+  group_by(year, month, day, hour) %>%
+  summarise(rainfall_vol = sum(rainfall_volume),
+            pump_ar = sum(pump_area),
+            mean_rain = weighted.mean(mean_rainfall)) %>%
+  mutate(pump_station = 'maaspoort_de_rompert') %>%
+  rename(rainfall_volume = rainfall_vol,
+         pump_area = pump_ar,
+         mean_rainfall = mean_rain)
+
+agg_rain = bind_rows(agg_rain, maaspoort_de_rompert)
+
+
+flow_level_and_rain <- agg_flow %>%
+  left_join(agg_rain) %>%
+  bind_rows(agg_level %>%
+              left_join(agg_rain)) %>%
+  rename(mean_value_sd = sd) %>%
+  mutate(datetime = make_datetime(year=year,month=month,day=day,hour=hour))
+
+flow_level_and_rain[is.na(flow_level_and_rain$mean_rainfall),]
+
+unique(flow_level_and_rain[flow_level_and_rain$measurement_type == 'flow',]$pump_station)
+
+fwrite(flow_level_and_rain, 'combined_data_files/flow_level_and_rain.csv')
+```
+
+
+
