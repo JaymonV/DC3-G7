@@ -1,29 +1,40 @@
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
+if(!require(rstudioapi))install.packages("rstudioapi")
+library(rstudioapi)
 if(!require(forecast))install.packages("forecast")
 library(forecast)
-
 if(!require(lmtest))install.packages("lmtest")
 library(lmtest)
 
-df <- read.csv('Export engelerschans flow.csv')
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-df[,'measurement_begin'] <- as.Date(df[,'measurement_begin'])
+###############################################################
+############################# NEW MODEL #######################
+###############################################################
 
-min_date = c(1975, 1)
+df <- read.csv('flow_level_and_rain.csv')
 
-df_ts <- ts(df[,'value'], 
-          start=min(df[,'measurement_begin']))
+unique(df[,'pump_station'])
 
-df_ts2 <- df_ts - lag(df_ts, k=168)
+# Select model
+df <- df[df[,'pump_station'] == 'helftheuvelweg',]
 
-df_pacf <- pacf(df_ts2, lag=200)
+df[is.na(df[,'rainfall_volume']),'rainfall_volume'] <- 0
+rainfall <- df[,'rainfall_volume']
+flow_value <- df[,'mean_value']
 
-model <- arima(df_ts2, order=c(3,0,0), method="CSS",
-               seasonal=list(order=c(0,1,1),
-                             period=168))
+df[,'datetime'] <- as.Date(df[,'datetime'])
+
+df_ts <- ts(df[,'mean_value'], 
+            start=min(df[,'datetime']))
+
+lags <- rep(0, 171)
+lags[167:171] <- NA
+lags[24] <- NA
+
+length(lags)
+
+model <- Arima(df_ts, order=c(169, 0, 0), xreg=rainfall, method='CSS', fixed=lags)
 
 coeftest(model)
-summary(model)
 
-var(df[,'value'])**0.5
+df_aacf <- pacf(df_ts, lag=169)
