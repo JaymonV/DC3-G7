@@ -33,8 +33,8 @@ df_ts_test <- window(df_ts, start=(31931-timeslot))
 rainfall_train <- c(0, rainfall[1:(14398-timeslot)])
 rainfall_test <- rainfall[(14399-timeslot):14398]
 
-lags <- rep(0, 171)
-lags[167:171] <- NA
+lags <- rep(0, 175)
+lags[167:175] <- NA
 lags[24] <- NA
 
 length(lags)
@@ -42,11 +42,24 @@ length(lags)
 length(df_ts_train)
 length(rainfall_train)
 
-model <- Arima(df_ts_train, order=c(169, 1, 0), xreg=rainfall_train, method='CSS', fixed=lags, include.drift=TRUE)
+model <- Arima(df_ts_train, order=c(169, 1, 1), xreg=rainfall_train, method='CSS')
 
 df_forecast <- forecast(model, df_ts_test, xreg=rainfall_test)
+summary(df_forecast)
 
 coeftest(model)
+
+df[,'mean_value'] %>%
+  ts(frequency = 24)%>% 
+  stlf() %>% 
+  autoplot() +
+  xlim(595, 605)
+
+df[,'mean_value'] %>%
+  ts(frequency = 24)%>% 
+  mstl() %>% 
+  autoplot() +
+  xlim(595, 605)
 
 rain_df <- as.data.frame(list(rain=rainfall_test, Time=(31931-timeslot):31930))
 
