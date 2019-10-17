@@ -41,18 +41,35 @@ data_select <- function(file, pump_station_name=NA) {
   df
 }
 
-rain_delay <- function()
+rain_delay <- function(v, cutoff) {
+  print(cutoff)
+  result <- rep(NA, length(v))
+  carry_over <- 0
+  for (i in 1:length(v)) {
+    print(v[i])
+    if (v[i] + carry_over > cutoff) {
+      carry_over <- v[i] + carry_over - cutoff
+      result[i] <- cufoff
+    } else {
+      carry_over <- 0
+      result[i] <- v[i] + carry_over
+    }
+  }
+  result
+}
 
-fit_model <- function(df) {
+
+fit_model <- function(df, threshold) {
   df <- df %>%
-    mutate(rainfall_lag2 = replace_na(lag(rainfall_volume, 2), 0),
-           rainfall_lag3 = replace_na(lag(rainfall_volume, 3), 0)) %>%
-    mutate(weekday = wday(datetime)) %>%
+    mutate(rainfall_delay = pmin(threshold, rainfall_volume + pmax(0, replace_na(lag(rainfall_volume),0) - threshold))) %>%
+    mutate(weekday = wday(datetime),
+           rainfall_delay_lag1 = replace_na(lag(rainfall_delay, 1), 0),
+           rainfall_delay_lag2 = replace_na(lag(rainfall_delay, 2), 0)) %>%
     mutate(warm = ifelse(month >= 5 & month <= 10, 1, 0))
   
   stl_data <- df[,'mean_value'] %>%
     ts(frequency = 24) %>% 
-    stlf(h=24, etsmodel='ZNN')
+    stlf(h=24)
   
   autoplot(stl_data)
   
@@ -60,19 +77,18 @@ fit_model <- function(df) {
   df$stl_residuals <- as.vector(residuals(stl_data))
   print(summary(stl_data))
   
-  lm_data <- lm(mean_value ~ stl_fitted + rainfall_volume + rainfall_lag2 + rainfall_lag3 + level, df)
+  lm_data <- lm(mean_value ~ stl_fitted + rainfall_delay_lag2, df)
   df$lm_fitted <- pmax(as.vector(fitted(lm_data)),0)
   df$lm_residuals <- as.vector(residuals(lm_data))
   print(rmse(df$lm_fitted, df$mean_value))
   print(summary(lm_data))
-
   
   df
 }
 
 df <- data_select('combined_data_files/flow_level_and_rain.csv', 'helftheuvelweg')
 
-df_model <- fit_model(df) 
+df_model <- fit_model(df, 3000) 
   
 
 # Select model
