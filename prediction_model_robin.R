@@ -41,24 +41,6 @@ data_select <- function(file, pump_station_name=NA) {
   df
 }
 
-rain_delay <- function(v, cutoff) {
-  print(cutoff)
-  result <- rep(NA, length(v))
-  carry_over <- 0
-  for (i in 1:length(v)) {
-    print(v[i])
-    if (v[i] + carry_over > cutoff) {
-      carry_over <- v[i] + carry_over - cutoff
-      result[i] <- cufoff
-    } else {
-      carry_over <- 0
-      result[i] <- v[i] + carry_over
-    }
-  }
-  result
-}
-
-
 fit_model <- function(df, threshold) {
   df <- df %>%
     mutate(rainfall_delay = pmin(threshold, rainfall_volume + pmax(0, replace_na(lag(rainfall_volume),0) - threshold))) %>%
