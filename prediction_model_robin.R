@@ -11,6 +11,12 @@ library(Metrics)
 library(RcppRoll)
 setwd('\\Users\\20166843\\Documents\\Studie\\Data Challenge 3\\Files')
 
+jaymon <- TRUE
+
+if (jaymon){
+  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+}
+
 ###############################################################
 ############################# NEW MODEL #######################
 ###############################################################
@@ -69,6 +75,9 @@ fit_model <- function(df, threshold) {
 }
 
 df <- data_select('combined_data_files/flow_level_and_rain.csv', 'helftheuvelweg')
+
+if (jaymon){
+  df <- data_select('flow_level_and_rain.csv', 'helftheuvelweg')}
 
 df_model <- fit_model(df, 3000) 
   
