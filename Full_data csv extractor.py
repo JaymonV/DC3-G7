@@ -2,6 +2,13 @@
 
 Requires 'full_data.csv' in the same folder as the current Python file. 
 
+Imports the data, and settings (pump and flow/level) can be inserted in terminal, to select
+a subset of the whole dataset. Then, this data is 'resampled' to get a 
+'constant' time interval
+https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.resample.html
+
+Then, a csv is exported with the pump and information type (flow/level) in the naming.
+
 """
 
 ########################### SETTINGS ##########################################
@@ -73,17 +80,3 @@ y = y.reset_index()
 y.to_csv('Export {} {}.csv'
          .format(pump_station_choice, measurement_type_choice),
          index=False)
-
-# =============================================================================
-# print('Fitting model...')
-# 
-# model = ARMA(y, order=(24, 1))
-# 
-# print('Part 1 done')
-# 
-# model_fit = model.fit(disp=0)
-# 
-# print(model_fit.summary())
-# 
-# print('Running time: {}'.format(str(time.time() - time_start)))
-# =============================================================================
